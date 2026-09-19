@@ -36,6 +36,39 @@ app.post('/api/students', async (req, res) => {
   }
 });
 
+
+app.put('/api/students/:id', async (req, res) => {
+  try {
+    const updatedStudent = await Student.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({ error: 'Không tìm thấy sinh viên' });
+    }
+
+    res.json(updatedStudent);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/students/:id', async (req, res) => {
+  try {
+    const deletedStudent = await Student.findByIdAndDelete(req.params.id);
+
+    if (!deletedStudent) {
+      return res.status(404).json({ error: 'Không tìm thấy sinh viên' });
+    }
+
+    res.json({ message: 'Xóa sinh viên thành công' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });

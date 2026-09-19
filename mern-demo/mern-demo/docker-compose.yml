@@ -1,0 +1,29 @@
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mern-backend-compose
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    networks:
+      - mern-network
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: mern-frontend-compose
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+
+networks:
+  mern-network:
+    driver: bridge
