@@ -70,7 +70,7 @@ function App() {
 
   return (
     <div style={{ padding: 20, fontFamily: 'sans-serif' }}>
-      <h1>Quan ly sinh vien</h1>
+      <h1>Quan ly sinh vien - Version 2.0</h1>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
         <input
