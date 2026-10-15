@@ -1,19 +1,42 @@
+
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://localhost:5000/api/students';
+const API_URL = 'https://mern-backend-minhdang.onrender.com/api/students';
 
 function App() {
   const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({ studentId: '', name: '', email: '' });
+  const [form, setForm] = useState({
+    studentId: '',
+    name: '',
+    email: '',
+  });
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const fetchStudents = async () => {
+    setLoading(true);
+    setError('');
+
     try {
       const res = await fetch(API_URL);
+
+      if (!res.ok) {
+        throw new Error(`Lỗi tải danh sách: HTTP ${res.status}`);
+      }
+
       const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error('API chưa trả về danh sách sinh viên.');
+      }
+
       setStudents(data);
     } catch (err) {
-      console.error('Loi khi lay danh sach:', err);
+      setError(err.message || 'Không kết nối được backend.');
+      console.error('Lỗi lấy sinh viên:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,33 +50,37 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     try {
-      if (editingId) {
-        await fetch(API_URL + '/' + editingId, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-        setEditingId(null);
-      } else {
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
+      const url = editingId
+        ? `${API_URL}/${editingId}`
+        : API_URL;
+
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Không lưu được sinh viên: HTTP ${res.status}`);
       }
+
       setForm({ studentId: '', name: '', email: '' });
-      fetchStudents();
+      setEditingId(null);
+      await fetchStudents();
     } catch (err) {
-      console.error('Loi khi luu sinh vien:', err);
+      setError(err.message || 'Lỗi khi lưu sinh viên.');
+      console.error('Lỗi lưu sinh viên:', err);
     }
   };
 
   const handleEditClick = (student) => {
     setForm({
-      studentId: student.studentId,
-      name: student.name,
-      email: student.email,
+      studentId: student.studentId || '',
+      name: student.name || '',
+      email: student.email || '',
     });
     setEditingId(student._id);
   };
@@ -61,16 +88,34 @@ function App() {
   const handleCancelEdit = () => {
     setForm({ studentId: '', name: '', email: '' });
     setEditingId(null);
+    setError('');
   };
 
   const handleDelete = async (id) => {
-    await fetch(API_URL + '/' + id, { method: 'DELETE' });
-    fetchStudents();
+    if (!window.confirm('Bạn có chắc muốn xóa sinh viên này?')) {
+      return;
+    }
+
+    setError('');
+
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error(`Không xóa được: HTTP ${res.status}`);
+      }
+
+      await fetchStudents();
+    } catch (err) {
+      setError(err.message || 'Lỗi khi xóa sinh viên.');
+    }
   };
 
   return (
     <div style={{ padding: 20, fontFamily: 'sans-serif' }}>
-      <h1>Quan ly sinh vien - Version 2.0</h1>
+      <h1>Quản lý sinh viên - Version 2.0</h1>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
         <input
@@ -79,43 +124,67 @@ function App() {
           value={form.studentId}
           onChange={handleChange}
           required
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, marginBottom: 8 }}
         />
+
         <input
           name="name"
-          placeholder="Ho ten"
+          placeholder="Họ tên"
           value={form.name}
           onChange={handleChange}
           required
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, marginBottom: 8 }}
         />
+
         <input
           name="email"
+          type="email"
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
           required
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, marginBottom: 8 }}
         />
+
         <button type="submit">
-          {editingId ? 'Cap nhat' : 'Them sinh vien'}
+          {editingId ? 'Cập nhật' : 'Thêm sinh viên'}
         </button>
+
         {editingId && (
-          <button type="button" onClick={handleCancelEdit} style={{ marginLeft: 8 }}>
-            Huy
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            style={{ marginLeft: 8 }}
+          >
+            Hủy
           </button>
         )}
       </form>
 
-      <table border="1" cellPadding="8">
+      {error && (
+        <p style={{ color: 'red' }}>{error}</p>
+      )}
+
+      <button onClick={fetchStudents} disabled={loading}>
+        {loading ? 'Đang tải...' : 'Tải lại danh sách'}
+      </button>
+
+      {loading && <p>Đang tải danh sách sinh viên...</p>}
+
+      <table
+        border="1"
+        cellPadding="8"
+        style={{ marginTop: 16, borderCollapse: 'collapse' }}
+      >
         <thead>
           <tr>
             <th>MSSV</th>
-            <th>Ho ten</th>
+            <th>Họ tên</th>
             <th>Email</th>
-            <th>Hanh dong</th>
+            <th>Hành động</th>
           </tr>
         </thead>
+
         <tbody>
           {students.map((s) => (
             <tr key={s._id}>
@@ -123,13 +192,25 @@ function App() {
               <td>{s.name}</td>
               <td>{s.email}</td>
               <td>
-                <button onClick={() => handleEditClick(s)} style={{ marginRight: 8 }}>
-                  Sua
+                <button
+                  onClick={() => handleEditClick(s)}
+                  style={{ marginRight: 8 }}
+                >
+                  Sửa
                 </button>
-                <button onClick={() => handleDelete(s._id)}>Xoa</button>
+
+                <button onClick={() => handleDelete(s._id)}>
+                  Xóa
+                </button>
               </td>
             </tr>
           ))}
+
+          {!loading && students.length === 0 && (
+            <tr>
+              <td colSpan="4">Chưa có sinh viên hoặc chưa tải được dữ liệu.</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
